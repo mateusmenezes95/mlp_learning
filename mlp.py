@@ -5,7 +5,6 @@ import tensorflow as tf
 import numpy as np
 import yaml
 from sklearn.model_selection import train_test_split
-from tensorflow.keras.utils import to_categorical
 
 class MLP:
   def __init__(self):
@@ -45,8 +44,8 @@ class MLP:
     self.x_train = self.x_train / max_value 
     self.x_test = self.x_test / max_value
 
-    self.train_label = np.array(self._label_to_list(self.y_train))
-    self.test_label = np.array(self._label_to_list(self.y_test))
+    self.train_label = tf.keras.utils.to_categorical(self.y_train - 1, num_classes=self._labels_len)
+    self.test_label = tf.keras.utils.to_categorical(self.y_test - 1, num_classes=self._labels_len)
   
   def create_model(self, hiden_layer_neurons, activation_functions, dropout_parameters, _loss, _metrics, _optimizer, lr):
     input_size = self._number_of_attributes - 1
@@ -95,15 +94,6 @@ class MLP:
     ax2.set_label(ax2.legend(loc='lower right'))
     
     plt.show()
-
-  def _label_to_list(self, label_list):
-    list_ = []
-    for i in range(len(label_list)):
-      aux_list = np.zeros(self._labels_len, dtype=int).tolist()
-      index = label_list.item((i, 0)) - 1
-      aux_list[index] = 1
-      list_.append(aux_list)
-    return list_
 
   def _split_columns(self, data):
     # Dataframe hold ID, 9 attributes and 1 class attribute (label)
