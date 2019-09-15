@@ -1,0 +1,9 @@
+# Hyperparameters for a MLP with 3 layers: input, hiden, output
+hiden_layer_neurons: 32
+activation_functions: [tanh, tanh, softmax]
+loss: binary_crossentropy
+metrics: [accuracy, mse]
+optimizer: Adam
+lr: 0.01
+batch_size:  1
+epochs: 150
