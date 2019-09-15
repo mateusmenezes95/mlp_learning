@@ -5,12 +5,12 @@ import tensorflow as tf
 import numpy as np
 import yaml
 from sklearn.model_selection import train_test_split
+from tensorflow.keras.utils import to_categorical
 
 class MLP:
   def __init__(self):
     pass
   def get_data(self, data_path):
-    # 'dataset/glass.data'
     self.dataframe = pd.read_csv(data_path, header=None)
     
     map_dic = {'building_windows_float_processed': 1, 
@@ -26,7 +26,7 @@ class MLP:
     self._labels_len = len(self._labels_list)
 
   def prepare_data(self, test_data_size):
-    # Split train and tests subsets (70% train | 30% test) and shuffles the data
+    # Split train and tests subsets ((1-test_data_size)*100% train | test_data_size*100% test) and shuffles the data
     train_data, test_data = train_test_split(self.dataframe, test_size=test_data_size)
 
     # Dataframe hold ID, 9 attributes and 1 class attribute (label)
@@ -48,15 +48,18 @@ class MLP:
     self.train_label = np.array(self._label_to_list(self.y_train))
     self.test_label = np.array(self._label_to_list(self.y_test))
   
-  def create_model(self, hiden_layer_neurons, activation_functions, _loss, _metrics, _optimizer, lr):
+  def create_model(self, hiden_layer_neurons, activation_functions, dropout_parameters, _loss, _metrics, _optimizer, lr):
     input_size = self._number_of_attributes - 1
     self.neural_network_model = tf.keras.models.Sequential()
     self.neural_network_model.add(tf.keras.layers.Dense(input_size,
                                   input_shape=(input_size,),
-                                  activation=activation_functions[0]))
-    # self.neural_network_model.add(tf.keras.layers.Dropout(0.1))
-    self.neural_network_model.add(tf.keras.layers.Dense(32, activation=activation_functions[1]))
-    # self.neural_network_model.add(tf.keras.layers.Dropout(0.1))
+                                  activation=activation_functions[0],
+                                  kernel_initializer='he_uniform'))
+    if dropout_parameters[0] == True:
+      self.neural_network_model.add(tf.keras.layers.Dropout(dropout_parameters[1]))
+    self.neural_network_model.add(tf.keras.layers.Dense(hiden_layer_neurons, activation=activation_functions[1]))
+    if dropout_parameters[2] == True:
+      self.neural_network_model.add(tf.keras.layers.Dropout(dropout_parameters[3]))
     self.neural_network_model.add(tf.keras.layers.Dense(self._labels_len, activation=activation_functions[2]))
 
     self.neural_network_model.compile(loss=_loss,
@@ -69,8 +72,8 @@ class MLP:
                                                  epochs=_epochs,
                                                  verbose=1,
                                                  validation_data=(self.x_test, self.test_label))
-    self.loss_value, self.accuracy_value, self.mse_value = self.neural_network_model.evaluate(self.x_test, self.test_label)
-    print("Loss value=", self.loss_value, "Accuracy value =", self.accuracy_value, "MSE value = ", self.mse_value)
+    self.loss_value, self.accuracy_value = self.neural_network_model.evaluate(self.x_test, self.test_label)
+    print("Loss value=", self.loss_value, "Accuracy value =", self.accuracy_value)
   
   def show_results(self):
     # summarize history for accuracy
@@ -129,6 +132,7 @@ if __name__ == '__main__':
   mlp.prepare_data(0.3)
   mlp.create_model(hyper_parameter['hiden_layer_neurons'],
                    hyper_parameter['activation_functions'],
+                   hyper_parameter['dropout_parameters'],
                    hyper_parameter['loss'],
                    hyper_parameter['metrics'],
                    hyper_parameter['optimizer'],
