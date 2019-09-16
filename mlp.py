@@ -5,6 +5,7 @@ import tensorflow as tf
 import numpy as np
 import yaml
 from sklearn.model_selection import train_test_split
+from os import sys
 
 class MLP:
   def __init__(self):
@@ -94,6 +95,21 @@ class MLP:
     ax2.set_label(ax2.legend(loc='lower right'))
     
     plt.show()
+  
+  def save_model(self):
+    is_to_save = input("Do you want save the model [y/n]: ")
+    if is_to_save == 'y':
+      self.neural_network_model.save('mlp_model.h5')
+      print('Model saved in mlp_model.h5 file')
+      return
+    print('The current model was discarded!')
+    return
+
+  def evaluate_model(self, model):
+    model_loaded = tf.keras.models.load_model(model)
+    model_loaded.summary()
+    loss_value, accuracy_value = model_loaded.evaluate(self.x_test, self.test_label)
+    print("Loss value=", loss_value, "Accuracy value =", accuracy_value)
 
   def _split_columns(self, data):
     # Dataframe hold ID, 9 attributes and 1 class attribute (label)
@@ -115,21 +131,35 @@ class MLP:
     return optimizer_dic[name]
 
 if __name__ == '__main__':
-  with open('hyper_parameters.yaml', 'r') as config_file:
-    hyper_parameter = yaml.load(config_file, Loader=yaml.FullLoader) 
+  print(type(sys.argv[1]))
+  if sys.argv[1] != 'train_model' and sys.argv[1] != 'evaluate_model':
+    print('Input argument <' + sys.argv[1] + '> is invalid! Options are: train_model ou evaluate_model')
+    sys.exit()
+
   mlp = MLP()
   mlp.get_data('dataset/glass.data')
   mlp.prepare_data(0.3)
-  mlp.create_model(hyper_parameter['hiden_layer_neurons'],
-                   hyper_parameter['activation_functions'],
-                   hyper_parameter['dropout_parameters'],
-                   hyper_parameter['loss'],
-                   hyper_parameter['metrics'],
-                   hyper_parameter['optimizer'],
-                   hyper_parameter['lr'])
-  mlp.train(hyper_parameter['batch_size'],
-            hyper_parameter['epochs'])
-  mlp.show_results()
+
+  if sys.argv[1] == 'train_model':
+    with open('hyper_parameters.yaml', 'r') as config_file:
+      hyper_parameter = yaml.load(config_file, Loader=yaml.FullLoader)
+
+    mlp.create_model(hyper_parameter['hiden_layer_neurons'],
+                     hyper_parameter['activation_functions'],
+                     hyper_parameter['dropout_parameters'],
+                     hyper_parameter['loss'],
+                     hyper_parameter['metrics'],
+                     hyper_parameter['optimizer'],
+                     hyper_parameter['lr'])
+
+    mlp.train(hyper_parameter['batch_size'],
+              hyper_parameter['epochs'])
+
+    mlp.show_results()
+    mlp.save_model()
+  else:
+    mlp.evaluate_model('mlp_model.h5')
+
 
 #   print_separator('Predictions')
 #   predictions = neural_network_model.predict(x_test)
