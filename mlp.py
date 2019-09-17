@@ -11,7 +11,10 @@ class MLP:
   def __init__(self):
     pass
   def get_data(self, data_path):
-    self.dataframe = pd.read_csv(data_path, header=None)
+    self.train_dataframe = pd.read_csv(data_path + 'glass.train', header=None)
+    self.train_dataframe = self.train_dataframe.sample(frac=1)
+    self.test_dataframe = pd.read_csv(data_path + 'glass.test', header=None)
+    self.test_dataframe = self.test_dataframe.sample(frac=1)
     
     map_dic = {'building_windows_float_processed': 1, 
                'building_windows_non_float_processed': 2, 
@@ -25,16 +28,13 @@ class MLP:
       self._labels_list.append(key)
     self._labels_len = len(self._labels_list)
 
-  def prepare_data(self, test_data_size):
-    # Split train and tests subsets ((1-test_data_size)*100% train | test_data_size*100% test) and shuffles the data
-    train_data, test_data = train_test_split(self.dataframe, test_size=test_data_size)
-
+  def prepare_data(self):
     # Dataframe hold ID, 9 attributes and 1 class attribute (label)
-    self._number_of_attributes = self.dataframe.shape[1] - 1
+    self._number_of_attributes = self.train_dataframe.shape[1] - 1
     self._label_column = self._number_of_attributes
 
-    self.x_train_index, self.x_train, self.y_train = self._split_columns(train_data)
-    self.x_test_index, self.x_test, self.y_test = self._split_columns(test_data)
+    self.x_train_index, self.x_train, self.y_train = self._split_columns(self.train_dataframe)
+    self.x_test_index, self.x_test, self.y_test = self._split_columns(self.test_dataframe)
 
     # convert data to nparray
     self.x_train, self.y_train = self.x_train.values, self.y_train.values
@@ -89,7 +89,7 @@ class MLP:
     ax2.set_title('Model Loss')
     ax2.set_ylabel('Loss')
     ax2.set_xlabel('Epoch')
-    ax2.set_ylim(0, 0.5)
+    ax2.set_ylim(0, self.loss_value * 2)
     ax2.plot(self.history.history['loss'], label='train')
     ax2.plot(self.history.history['val_loss'], label='test')
     ax2.set_label(ax2.legend(loc='lower right'))
@@ -109,7 +109,21 @@ class MLP:
     model_loaded = tf.keras.models.load_model(model)
     model_loaded.summary()
     loss_value, accuracy_value = model_loaded.evaluate(self.x_test, self.test_label)
-    print("Loss value=", loss_value, "Accuracy value =", accuracy_value)
+    print("Loss value=", loss_value, "Accuracy value = {:5.2f}%" .format(100 * accuracy_value))
+    count = 0
+    predictions = model_loaded.predict(self.x_test)
+    for i in range(len(predictions)):
+      predict = self._labels_list[np.argmax(predictions[i])]
+      # actual = self._labels_list[np.argmax(self.data_label[i])]
+      actual = self._labels_list[(self.y_test.item((i, 0)) - 1)]
+      if predict == actual: 
+        count += 1
+      print('Predict: ', predict, '| Actual: ', actual)
+      print('-------------------------------------------------------------------------------------------------')
+
+    print("Accuracy value = {:5.2f}%" .format(100 * (count / len(predictions))))
+    print('Count = ', count)
+
 
   def _split_columns(self, data):
     # Dataframe hold ID, 9 attributes and 1 class attribute (label)
@@ -137,8 +151,8 @@ if __name__ == '__main__':
     sys.exit()
 
   mlp = MLP()
-  mlp.get_data('dataset/glass.data')
-  mlp.prepare_data(0.3)
+  mlp.get_data('dataset/')
+  mlp.prepare_data()
 
   if sys.argv[1] == 'train_model':
     with open('hyper_parameters.yaml', 'r') as config_file:
@@ -159,10 +173,3 @@ if __name__ == '__main__':
     mlp.save_model()
   else:
     mlp.evaluate_model('mlp_model.h5')
-
-
-#   print_separator('Predictions')
-#   predictions = neural_network_model.predict(x_test)
-#   print(predictions[0])
-#   print(np.argmax(predictions[0]))
-#   print(labels_list[np.argmax(predictions[0])])
