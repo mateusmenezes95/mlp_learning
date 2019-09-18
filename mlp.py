@@ -77,13 +77,14 @@ class MLP:
     print("Loss value=", self.loss_value, "Accuracy value =", self.accuracy_value)
   
   def show_results(self):
+    metrics_keys = list(self.history.history.keys())
     # summarize history for accuracy
     fig, (ax1, ax2) = plt.subplots(2, 1, sharex=True)
     ax1.set_title('Model Accuracy')
     ax1.set_ylabel('Acccuracy')
-    ax1.set_ylim(0.5, 1.0)
-    ax1.plot(self.history.history['acc'], label='train')
-    ax1.plot(self.history.history['val_acc'], label='test')
+    ax1.set_ylim(0, 1) 
+    ax1.plot(self.history.history[metrics_keys[1]], label='train')
+    ax1.plot(self.history.history[metrics_keys[3]], label='test')
     ax1.set_label(ax1.legend(loc='lower right'))
     
     # summarize history for loss
@@ -91,8 +92,8 @@ class MLP:
     ax2.set_ylabel('Loss')
     ax2.set_xlabel('Epoch')
     ax2.set_ylim(0, self.loss_value * 2)
-    ax2.plot(self.history.history['loss'], label='train')
-    ax2.plot(self.history.history['val_loss'], label='test')
+    ax2.plot(self.history.history[metrics_keys[0]], label='train')
+    ax2.plot(self.history.history[metrics_keys[2]], label='test')
     ax2.set_label(ax2.legend(loc='lower right'))
     
     plt.show()
@@ -110,7 +111,6 @@ class MLP:
     model_loaded = tf.keras.models.load_model(model)
     loss_value, accuracy_value = model_loaded.evaluate(self.x_test, self.test_label)
     print("Loss value=", loss_value, "Accuracy value = {:5.2f}%" .format(100 * accuracy_value))
-    count = 0
     predictions = model_loaded.predict(self.x_test)
 
     y_pred = []
@@ -140,7 +140,7 @@ class MLP:
 
   def _get_optimizer_from_name(self, name, lr):
     optimizer_dic = {
-      'SGD': tf.keras.optimizers.SGD(lr=lr),
+      'SGD': tf.keras.optimizers.SGD(lr=lr, momentum=0.5, nesterov=True),
       'RMSprop': tf.keras.optimizers.RMSprop(lr=lr),
       'Adagrad': tf.keras.optimizers.Adagrad(lr=lr),
       'Adadelta': tf.keras.optimizers.Adadelta(lr=lr),

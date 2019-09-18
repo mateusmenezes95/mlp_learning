@@ -1,9 +1,9 @@
 # Hyperparameters for a MLP with 3 layers: input, hiden, output
 hiden_layer_neurons: 32
-activation_functions: [relu, tanh, softmax]
+activation_functions: [tanh, tanh, sigmoid]
 dropout_parameters: [True, 0.2, True, 0.8]
 loss: binary_crossentropy
-metrics: [accuracy]
+metrics: [categorical_accuracy]
 optimizer: Adam
 lr: 0.01
 batch_size: 10
