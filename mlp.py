@@ -17,12 +17,7 @@ class MLP:
     self.test_dataframe = pd.read_csv(data_path + 'glass.test', header=None)
     self.test_dataframe = self.test_dataframe.sample(frac=1)
     
-    map_dic = {'building_windows_float_processed': 1, 
-               'building_windows_non_float_processed': 2, 
-               'vehicle_windows_float_processed': 3, 
-               'containers': 4, 
-               'tableware': 5, 
-               'headlamps': 6}
+    map_dic = {'non_window': 0, 'window': 1} 
     
     self._labels_list = []
     for key in map_dic:
@@ -46,8 +41,8 @@ class MLP:
     self.x_train = self.x_train / max_value 
     self.x_test = self.x_test / max_value
 
-    self.train_label = tf.keras.utils.to_categorical(self.y_train - 1, num_classes=self._labels_len)
-    self.test_label = tf.keras.utils.to_categorical(self.y_test - 1, num_classes=self._labels_len)
+    self.train_label = self.y_train
+    self.test_label = self.y_test
   
   def create_model(self, hiden_layer_neurons, activation_functions, dropout_parameters, _loss, _metrics, _optimizer, lr):
     input_size = self._number_of_attributes - 1
@@ -61,7 +56,7 @@ class MLP:
     self.neural_network_model.add(tf.keras.layers.Dense(hiden_layer_neurons, activation=activation_functions[1]))
     if dropout_parameters[2] == True:
       self.neural_network_model.add(tf.keras.layers.Dropout(dropout_parameters[3]))
-    self.neural_network_model.add(tf.keras.layers.Dense(self._labels_len, activation=activation_functions[2]))
+    self.neural_network_model.add(tf.keras.layers.Dense(1, activation=activation_functions[2]))
 
     self.neural_network_model.compile(loss=_loss,
                                       optimizer=self._get_optimizer_from_name(_optimizer, lr),
@@ -91,7 +86,7 @@ class MLP:
     ax2.set_title('Model Loss')
     ax2.set_ylabel('Loss')
     ax2.set_xlabel('Epoch')
-    ax2.set_ylim(0, self.loss_value * 2)
+    ax2.set_ylim(0, max([max(self.history.history[metrics_keys[1]]), max(self.history.history[metrics_keys[0]])]))
     ax2.plot(self.history.history[metrics_keys[0]], label='train')
     ax2.plot(self.history.history[metrics_keys[2]], label='test')
     ax2.set_label(ax2.legend(loc='lower right'))
@@ -115,7 +110,10 @@ class MLP:
 
     y_pred = []
     for i in range(len(predictions)):
-      y_pred.append(np.argmax(predictions[i]) + 1)
+      if predictions[i] > 0.5:
+        y_pred.append(1)
+      else:
+        y_pred.append(0)
     
     y_true = self.y_test.T.tolist()[0]
     print('Predict: ', y_pred)
@@ -158,7 +156,7 @@ if __name__ == '__main__':
     sys.exit()
 
   mlp = MLP()
-  mlp.get_data('dataset/')
+  mlp.get_data('dataset/binary_windows_glass/')
   mlp.prepare_data()
 
   if sys.argv[1] == 'train_model':
