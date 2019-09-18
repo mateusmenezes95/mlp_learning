@@ -3,7 +3,7 @@ hiden_layer_neurons: 32
 activation_functions: [tanh, tanh, sigmoid]
 dropout_parameters: [True, 0.2, True, 0.8]
 loss: binary_crossentropy
-metrics: [categorical_accuracy]
+metrics: [accuracy]
 optimizer: Adam
 lr: 0.01
 batch_size: 10
