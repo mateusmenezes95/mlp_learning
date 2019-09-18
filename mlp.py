@@ -5,6 +5,7 @@ import tensorflow as tf
 import numpy as np
 import yaml
 from sklearn.model_selection import train_test_split
+from sklearn.metrics import confusion_matrix
 from os import sys
 
 class MLP:
@@ -76,13 +77,14 @@ class MLP:
     print("Loss value=", self.loss_value, "Accuracy value =", self.accuracy_value)
   
   def show_results(self):
+    metrics_keys = list(self.history.history.keys())
     # summarize history for accuracy
     fig, (ax1, ax2) = plt.subplots(2, 1, sharex=True)
     ax1.set_title('Model Accuracy')
     ax1.set_ylabel('Acccuracy')
-    ax1.set_ylim(0.5, 1.0)
-    ax1.plot(self.history.history['acc'], label='train')
-    ax1.plot(self.history.history['val_acc'], label='test')
+    ax1.set_ylim(0, 1) 
+    ax1.plot(self.history.history[metrics_keys[1]], label='train')
+    ax1.plot(self.history.history[metrics_keys[3]], label='test')
     ax1.set_label(ax1.legend(loc='lower right'))
     
     # summarize history for loss
@@ -90,8 +92,8 @@ class MLP:
     ax2.set_ylabel('Loss')
     ax2.set_xlabel('Epoch')
     ax2.set_ylim(0, self.loss_value * 2)
-    ax2.plot(self.history.history['loss'], label='train')
-    ax2.plot(self.history.history['val_loss'], label='test')
+    ax2.plot(self.history.history[metrics_keys[0]], label='train')
+    ax2.plot(self.history.history[metrics_keys[2]], label='test')
     ax2.set_label(ax2.legend(loc='lower right'))
     
     plt.show()
@@ -107,23 +109,27 @@ class MLP:
 
   def evaluate_model(self, model):
     model_loaded = tf.keras.models.load_model(model)
-    model_loaded.summary()
     loss_value, accuracy_value = model_loaded.evaluate(self.x_test, self.test_label)
     print("Loss value=", loss_value, "Accuracy value = {:5.2f}%" .format(100 * accuracy_value))
-    count = 0
     predictions = model_loaded.predict(self.x_test)
+
+    y_pred = []
     for i in range(len(predictions)):
-      predict = self._labels_list[np.argmax(predictions[i])]
-      # actual = self._labels_list[np.argmax(self.data_label[i])]
-      actual = self._labels_list[(self.y_test.item((i, 0)) - 1)]
-      if predict == actual: 
-        count += 1
-      print('Predict: ', predict, '| Actual: ', actual)
-      print('-------------------------------------------------------------------------------------------------')
+      y_pred.append(np.argmax(predictions[i]) + 1)
+    
+    y_true = self.y_test.T.tolist()[0]
+    print('Predict: ', y_pred)
+    print('True:    ', y_true)
 
-    print("Accuracy value = {:5.2f}%" .format(100 * (count / len(predictions))))
-    print('Count = ', count)
+    # ground truth on vertical
+    print('---> Confusion Matrix <---')
+    print(confusion_matrix(y_true, y_pred))
+    print('--------------------------')
 
+    # get accuracy comparing y_true with y_pred
+    m = tf.compat.v1.keras.metrics.Accuracy()
+    m.update_state(y_true, y_pred)
+    print('Accuracy value directly: {:5.2f}%' .format(m.result().numpy() * 100))
 
   def _split_columns(self, data):
     # Dataframe hold ID, 9 attributes and 1 class attribute (label)
@@ -134,7 +140,7 @@ class MLP:
 
   def _get_optimizer_from_name(self, name, lr):
     optimizer_dic = {
-      'SGD': tf.keras.optimizers.SGD(lr=lr),
+      'SGD': tf.keras.optimizers.SGD(lr=lr, momentum=0.5, nesterov=True),
       'RMSprop': tf.keras.optimizers.RMSprop(lr=lr),
       'Adagrad': tf.keras.optimizers.Adagrad(lr=lr),
       'Adadelta': tf.keras.optimizers.Adadelta(lr=lr),
@@ -145,6 +151,7 @@ class MLP:
     return optimizer_dic[name]
 
 if __name__ == '__main__':
+  tf.enable_eager_execution()
   print(type(sys.argv[1]))
   if sys.argv[1] != 'train_model' and sys.argv[1] != 'evaluate_model':
     print('Input argument <' + sys.argv[1] + '> is invalid! Options are: train_model ou evaluate_model')
