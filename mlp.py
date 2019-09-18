@@ -156,7 +156,7 @@ if __name__ == '__main__':
     sys.exit()
 
   mlp = MLP()
-  mlp.get_data('dataset/binary_windows_glass/')
+  mlp.get_data('dataset/binary_window_non_window/')
   mlp.prepare_data()
 
   if sys.argv[1] == 'train_model':
